@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>A Moment Kept</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        /* --- THEME: VINTAGE ROMANCE --- */
+        :root {
+            --bg-rose: #fff0f3;
+            --primary: #c9184a; /* Deep Red/Pink */
+            --gold: #d4a373;
+            --paper: #fefae0;
+            --text: #590d22;
+        }
+
+        body {
+            font-family: 'Playfair Display', serif;
+            background: radial-gradient(circle at center, #fff0f3 0%, #ffccd5 100%);
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            margin: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* --- Floating Hearts Background --- */
+        .bg-hearts {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .heart-bg {
+            position: absolute;
+            color: rgba(255, 77, 109, 0.15);
+            animation: float 15s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(110vh) scale(0.5) rotate(0deg); opacity: 0; }
+            50% { opacity: 0.5; }
+            100% { transform: translateY(-10vh) scale(1.2) rotate(360deg); opacity: 0; }
+        }
+
+        /* --- Screens --- */
+        .screen {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            transition: opacity 1s ease-in-out;
+            opacity: 0;
+            pointer-events: none;
+            padding: 20px;
+        }
+
+        .screen.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .screen.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* --- COMPONENT: THE ENVELOPE --- */
+        .envelope-container {
+            position: relative;
+            width: 300px;
+            height: 200px;
+            cursor: pointer;
+            transition: transform 0.5s;
+        }
+
+        .envelope-container:hover {
+            transform: scale(1.02);
+        }
+
+        .envelope-base {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            background: #e5989b;
+            border-radius: 5px;
+            box-shadow: 0 10px 30px rgba(89, 13, 34, 0.2);
+            z-index: 1;
+        }
+
+        .flap {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #ffb3c1;
+            clip-path: polygon(0 0, 50% 55%, 100% 0);
+            transform-origin: top;
+            transition: transform 0.8s ease-in-out, z-index 0.8s step-end;
+            z-index: 5;
+            border-radius: 5px;
+        }
+
+        .flap.open {
+            transform: rotateX(180deg);
+            z-index: 0;
+            background: #ffcdb2; /* Lighter color for inside of flap */
+        }
+
+        .pocket {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #b5838d;
+            clip-path: polygon(0 100%, 50% 55%, 100% 100%);
+            z-index: 4;
+            border-radius: 0 0 5px 5px;
+        }
+        
+        .pocket-overlay {
+             position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+             background: linear-gradient(to top, rgba(0,0,0,0.1), transparent);
+             clip-path: polygon(0 100%, 0 0, 100% 0, 100% 100%, 50% 55%); /* Inverse clip roughly */
+             z-index: 4;
+             pointer-events: none;
+        }
+
+        .wax-seal {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            background: #9e2a2b;
+            border-radius: 50%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3), inset 0 2px 5px rgba(255,255,255,0.2);
+            z-index: 6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #ffcad4;
+            font-size: 24px;
+            cursor: pointer;
+            transition: transform 0.3s, opacity 0.5s;
+        }
+
+        .wax-seal:hover { transform: translate(-50%, -50%) scale(1.1); }
+        .wax-seal.broken { opacity: 0; pointer-events: none; transform: translate(-50%, -50%) scale(1.5); }
+
+        /* The Card Inside */
+        .letter-card {
+            position: absolute;
+            bottom: 10px;
+            left: 15px;
+            width: 270px;
+            height: 180px;
+            background: var(--paper);
+            border-radius: 4px;
+            z-index: 2;
+            transition: transform 1s ease-in-out 0.6s, box-shadow 1s 0.6s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
+
+        .letter-card.pulled {
+            transform: translateY(-120px) scale(1.1);
+            z-index: 10;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        /* --- Riddle Text Styling --- */
+        .handwriting {
+            font-family: 'Dancing Script', cursive;
+            font-size: 1.6rem;
+            color: var(--text);
+            line-height: 1.5;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 1s ease;
+        }
+
+        .handwriting.visible { opacity: 1; transform: translateY(0); }
+
+        /* --- Reveal Frame --- */
+        .frame-container {
+            position: relative;
+            background: white;
+            padding: 15px 15px 50px 15px; /* Polaroid style */
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+            transform: rotate(-2deg);
+            max-width: 320px;
+            width: 100%;
+            animation: float-frame 6s ease-in-out infinite;
+        }
+
+        .frame-inner {
+            width: 100%;
+            height: 300px;
+            background: #eee;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid #ddd;
+        }
+
+        .frame-inner img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        @keyframes float-frame {
+            0%, 100% { transform: rotate(-2deg) translateY(0); }
+            50% { transform: rotate(-1deg) translateY(-15px); }
+        }
+
+        .reveal-btn {
+            margin-top: 30px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-family: 'Playfair Display', serif;
+            font-size: 1.1rem;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(201, 24, 74, 0.4);
+            transition: all 0.3s;
+            opacity: 0;
+        }
+        
+        .reveal-btn.show { opacity: 1; }
+        .reveal-btn:hover { background: #a4163f; transform: scale(1.05); }
+
+    </style>
+</head>
+<body>
+
+    <!-- Background Hearts -->
+    <div class="bg-hearts" id="heart-container"></div>
+
+    <!-- SCREEN 1: THE ENVELOPE -->
+    <div id="screen-intro" class="screen active">
+        <h1 class="font-serif text-3xl mb-12 text-[#800f2f] italic tracking-wide animate-pulse">For You</h1>
+        
+        <div class="envelope-container" onclick="openLetter()">
+            <div class="flap" id="flap"></div>
+            <div class="pocket"></div>
+            <div class="envelope-base"></div>
+            
+            <!-- The Card Hidden Inside -->
+            <div class="letter-card" id="letter">
+                 <!-- Content injected via JS or just hidden initially -->
+                 <div class="w-full h-full border-2 border-[#d4a373] border-dashed p-4 flex items-center justify-center opacity-0 transition-opacity duration-1000" id="letter-content">
+                    <i class="fa-solid fa-heart text-3xl text-[#c9184a] animate-beat"></i>
+                 </div>
+            </div>
+
+            <div class="wax-seal" id="seal">
+                <i class="fa-solid fa-heart"></i>
+            </div>
+        </div>
+        
+        <p class="mt-12 text-[#b5838d] text-sm tracking-widest uppercase">Tap the Seal to Open</p>
+    </div>
+
+    <!-- SCREEN 2: THE RIDDLE (Overlay) -->
+    <div id="screen-riddle" class="screen">
+        <div class="bg-[#fefae0] p-8 max-w-sm w-full shadow-2xl rounded-sm relative" style="background-image: url('https://www.transparenttextures.com/patterns/cream-paper.png');">
+            
+            <div class="absolute -top-6 left-1/2 transform -translate-x-1/2">
+                <i class="fa-solid fa-thumbtack text-2xl text-[#d4a373] drop-shadow-md"></i>
+            </div>
+
+            <div class="text-center space-y-6 mt-4">
+                <p id="line-1" class="handwriting">I’m not a mirror,<br>yet you’ll see us inside.</p>
+                <p id="line-2" class="handwriting">I’m not a book,<br>yet I hold a chapter of pride.</p>
+                <p id="line-3" class="handwriting">Carefully crafted,<br>small and sweet…</p>
+                <p id="line-4" class="handwriting text-[#c9184a] font-bold">Guess who preserves a moment<br>where our hearts meet?</p>
+            </div>
+
+            <div class="text-center">
+                 <button id="btn-reveal" class="reveal-btn" onclick="revealGift()">Open to find out</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCREEN 3: THE REVEAL -->
+    <div id="screen-reveal" class="screen">
+        <div class="text-center relative z-20">
+            <h1 class="text-4xl text-[#800f2f] mb-6 italic">Happy Birthday Komal</h1>
+            
+            <div class="frame-container mx-auto">
+                <div class="frame-inner relative group">
+                    <!-- IMAGE LOGIC: Put her photo as 'Komal-1.jpg' in 'assets' folder -->
+                    <img src="assets/Komal-1.jpg" alt="Our Memory" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1516575150278-77136aed6920?q=80&w=2670&auto=format&fit=crop';">
+                    
+                    <!-- Shine effect on photo -->
+                    <div class="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/20 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" style="background-size: 200% 200%;"></div>
+                </div>
+                <div class="mt-4 font-serif text-gray-600 text-lg italic">
+                    Open to Find out
+                </div>
+                <div class="absolute -bottom-6 -right-6 text-5xl text-[#c9184a] transform rotate-12 opacity-80">
+                    <i class="fa-solid fa-heart"></i>
+                </div>
+            </div>
+
+            <button onclick="location.reload()" class="mt-12 text-[#b5838d] hover:text-[#c9184a] text-sm uppercase tracking-widest transition-colors">
+                 Replay Memory
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. Background Hearts ---
+        const container = document.getElementById('heart-container');
+        
+        for(let i=0; i<15; i++) {
+            const el = document.createElement('i');
+            el.classList.add('fa-solid', 'fa-heart', 'heart-bg');
+            // Random positioning
+            el.style.left = Math.random() * 100 + '%';
+            el.style.fontSize = (Math.random() * 20 + 10) + 'px';
+            el.style.animationDuration = (Math.random() * 10 + 10) + 's';
+            el.style.animationDelay = (Math.random() * 5) + 's';
+            container.appendChild(el);
+        }
+
+        // --- 2. Interaction Logic ---
+        function openLetter() {
+            // Break Seal
+            document.getElementById('seal').classList.add('broken');
+            
+            // Open Flap
+            setTimeout(() => {
+                document.getElementById('flap').classList.add('open');
+            }, 300);
+
+            // Pull Card Up
+            setTimeout(() => {
+                document.getElementById('letter').classList.add('pulled');
+                document.getElementById('letter-content').classList.remove('opacity-0');
+            }, 1000);
+
+            // Transition to Screen 2 (Riddle)
+            setTimeout(() => {
+                document.getElementById('screen-intro').classList.add('fade-out');
+                
+                setTimeout(() => {
+                    document.getElementById('screen-intro').classList.remove('active');
+                    document.getElementById('screen-riddle').classList.add('active');
+                    playRiddle();
+                }, 800);
+            }, 2000);
+        }
+
+        function playRiddle() {
+            const delays = [500, 2500, 4500, 6500];
+            const lines = ['line-1', 'line-2', 'line-3', 'line-4'];
+
+            lines.forEach((id, idx) => {
+                setTimeout(() => {
+                    document.getElementById(id).classList.add('visible');
+                }, delays[idx]);
+            });
+
+            setTimeout(() => {
+                document.getElementById('btn-reveal').classList.add('show');
+            }, 7500);
+        }
+
+        function revealGift() {
+            triggerConfetti();
+            
+            document.getElementById('screen-riddle').classList.add('fade-out');
+            
+            setTimeout(() => {
+                document.getElementById('screen-riddle').classList.remove('active');
+                document.getElementById('screen-reveal').classList.add('active');
+                
+                // More confetti
+                setTimeout(triggerConfetti, 500);
+            }, 1000);
+        }
+
+        function triggerConfetti() {
+            var duration = 3 * 1000;
+            var animationEnd = Date.now() + duration;
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
+
+            function randomInOut(min, max) {
+                return Math.random() * (max - min) + min;
+            }
+
+            var interval = setInterval(function() {
+                var timeLeft = animationEnd - Date.now();
+
+                if (timeLeft <= 0) {
+                    return clearInterval(interval);
+                }
+
+                var particleCount = 50 * (timeLeft / duration);
+                
+                confetti(Object.assign({}, defaults, { 
+                    particleCount, 
+                    origin: { x: randomInOut(0.1, 0.3), y: Math.random() - 0.2 }, 
+                    colors: ['#c9184a', '#ffb3c1', '#fff0f3'] 
+                }));
+                confetti(Object.assign({}, defaults, { 
+                    particleCount, 
+                    origin: { x: randomInOut(0.7, 0.9), y: Math.random() - 0.2 }, 
+                    colors: ['#c9184a', '#ffb3c1', '#fff0f3'] 
+                }));
+            }, 250);
+        }
+    </script>
+</body>
+</html>
